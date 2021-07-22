@@ -4,23 +4,18 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/big"
 	"os"
 
+	"github.com/jdgc/eth-mempool-whale-watcher/utils"
+
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient/gethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-const (
-	Wei   = 1
-	GWei  = 1e9
-	Ether = 1e18
-)
-
 func main() {
 	nodeURL := os.Getenv("NODE_URL")
+	utils.LoadThreshold()
 
 	if len(nodeURL) == 0 {
 		log.Fatal("node url not set")
@@ -54,27 +49,37 @@ func printTx(client *rpc.Client, tx common.Hash) {
 	var transaction map[string]interface{}
 	client.Call(&transaction, "eth_getTransactionByHash", tx)
 
-	// some transactions in pool return nothing when queried
-	// we also want to ignore transactions with 0 eth value.
 	if transaction == nil || transaction["value"] == "0x0" {
 		return
 	}
 
 	if value, ok := transaction["value"].(string); ok {
-		etherValue := valueInEth(value)
+		etherValue := utils.ValueInEth(value)
 
-		switch comparison := etherValue.Cmp(big.NewFloat(5)); comparison {
+		switch comparison := etherValue.Cmp(utils.Threshold); comparison {
 		case 0:
 			return
 		case -1:
 			return
 		}
 
-		fmt.Printf("*** NEW TX DETECTED ***\n")
-		fmt.Printf("tx hash: %s\n", transaction["hash"])
-		fmt.Printf("from: %s\n", transaction["from"])
-		fmt.Printf("from: %s\n", transaction["to"])
-		fmt.Printf("Ether value: %f\n", etherValue)
+		gasString, ok := transaction["gasPrice"].(string)
+		if ok != true {
+			fmt.Println(utils.RedString("Invalid gas price"))
+		}
+		gasPrice := utils.ValueInGwei(gasString)
+
+		fmt.Printf(utils.GreenString("*** NEW TX DETECTED ***\n"))
+		fmt.Printf(utils.YellowString("TX HASH: "))
+		fmt.Println(transaction["hash"])
+		fmt.Printf(utils.YellowString("FROM : "))
+		fmt.Println(transaction["from"])
+		fmt.Printf(utils.YellowString("TO: "))
+		fmt.Println(transaction["to"])
+		fmt.Printf(utils.YellowString("GAS PRICE: "))
+		fmt.Printf("%s Gwei\n", gasPrice.String())
+		fmt.Printf(utils.YellowString("ETH: "))
+		fmt.Println(etherValue)
 	} else {
 		return
 	}
@@ -83,13 +88,4 @@ func printTx(client *rpc.Client, tx common.Hash) {
 func logBadValue(transaction map[string]interface{}) {
 	fmt.Printf("bad value for tx hash: %s\n", transaction["hash"])
 	fmt.Printf("value: %s\n", transaction["value"])
-}
-
-func valueInEth(hexValueInWei string) *big.Float {
-	decodedValue, err := hexutil.DecodeBig(hexValueInWei)
-	if err != nil {
-		log.Fatalf("error decoding value: %s\n", hexValueInWei)
-	}
-	f := new(big.Float).SetInt(decodedValue)
-	return new(big.Float).Quo(f, big.NewFloat(Ether))
 }
