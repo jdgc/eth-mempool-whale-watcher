@@ -72,7 +72,7 @@ func printTx(client *rpc.Client, tx common.Hash) {
 		fmt.Printf(utils.GreenString("*** NEW TX DETECTED ***\n"))
 		fmt.Printf(utils.YellowString("TX HASH: "))
 		fmt.Println(transaction["hash"])
-		fmt.Printf(utils.YellowString("FROM : "))
+		fmt.Printf(utils.YellowString("FROM: "))
 		fmt.Println(transaction["from"])
 		fmt.Printf(utils.YellowString("TO: "))
 		fmt.Println(transaction["to"])
