@@ -6,7 +6,7 @@
 listen for large ETH movements in the mempool.
 
 This task will monitor pending transactions and report all movements of ETH over a given threshold.
-I mostly built this as a way to explore interacting with the mempool through geth but it may be useful as a tool for certain MEV strategies
+I built this as a way to play around with geth but it may be useful as a tool for certain MEV strategies
 or for analytics.
 
 ## Usage
